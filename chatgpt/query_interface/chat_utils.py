@@ -1,0 +1,83 @@
+from typing import Any, List, Dict
+import openai
+import requests
+# from secrets_utils import DATABASE_INTERFACE_BEAR_TOKEN
+# from secrets_utils import OPENAI_API_KEY
+import logging
+
+DATABASE_INTERFACE_BEAR_TOKEN= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Imx1Ym93ZW5fb3BlbmFpIiwiaWF0IjoxNTE2MjM5MDIyfQ.jtG7RXxq8UxLNynuHToKQi-a6BkJG8lmrtTAuzHbH1c"
+OPENAI_API_KEY = "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"
+
+def query_database(query_prompt: str) -> Dict[str, Any]:
+    """
+    Query vector database to retrieve chunk with user's input questions.
+    """
+    url = "http://0.0.0.0:8000/query"
+    headers = {
+        "Content-Type": "application/json",
+        "accept": "application/json",
+        "Authorization": f"Bearer {DATABASE_INTERFACE_BEAR_TOKEN}",
+    }
+    data = {"queries": [{"query": query_prompt, "top_k": 5}]}
+
+    response = requests.post(url, json=data, headers=headers)
+
+    if response.status_code == 200:
+        result = response.json()
+        # process the result
+        return result
+    else:
+        raise ValueError(f"Error: {response.status_code} : {response.content}")
+
+
+def apply_prompt_template(question: str) -> str:
+    """
+        A helper function that applies additional template on user's question.
+        Prompt engineering could be done here to improve the result. Here I will just use a minimal example.
+    """
+    prompt = f"""
+        By considering above input from me, answer the question: {question}
+    """
+    return prompt
+
+
+def call_chatgpt_api(user_question: str, chunks: List[str]) -> Dict[str, Any]:
+    """
+    Call chatgpt api with user's question and retrieved chunks.
+    """
+    # Send a request to the GPT-3 API
+    messages = list(
+        map(lambda chunk: {
+            "role": "user",
+            "content": chunk
+        }, chunks))
+    # print(messages)
+    question = apply_prompt_template(user_question)
+    messages.append({"role": "user", "content": question})
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        max_tokens=900,
+        temperature=0.7,  # High temperature leads to a more creative response.
+    )
+    return response
+
+
+def ask(user_question: str) -> Dict[str, Any]:
+    """
+    Handle user's questions.
+    """
+    # Get chunks from database.
+    chunks_response = query_database(user_question)
+    chunks = []
+    for result in chunks_response["results"]:
+        for inner_result in result["results"]:
+            chunks.append(inner_result["text"])
+    
+    logging.info("User's questions: %s", user_question)
+    logging.info("Retrieved chunks: %s", chunks)
+    
+    response = call_chatgpt_api(user_question, chunks)
+    logging.info("Response: %s", response)
+    
+    return response["choices"][0]["message"]["content"]
