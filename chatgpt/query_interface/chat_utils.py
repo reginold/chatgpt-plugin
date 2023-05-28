@@ -1,12 +1,10 @@
 from typing import Any, List, Dict
 import openai
 import requests
-# from secrets_utils import DATABASE_INTERFACE_BEAR_TOKEN
-# from secrets_utils import OPENAI_API_KEY
+from secrets_utils import DATABASE_INTERFACE_BEAR_TOKEN
+from secrets_utils import OPENAI_API_KEY
 import logging
 
-DATABASE_INTERFACE_BEAR_TOKEN= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Imx1Ym93ZW5fb3BlbmFpIiwiaWF0IjoxNTE2MjM5MDIyfQ.jtG7RXxq8UxLNynuHToKQi-a6BkJG8lmrtTAuzHbH1c"
-OPENAI_API_KEY = "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"
 
 def query_database(query_prompt: str) -> Dict[str, Any]:
     """
